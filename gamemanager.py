@@ -50,12 +50,20 @@ class GameManager:
     def confirm_equip_item(self, character, item):
         print(f"Confirming equip of {item.name} for {character.name}")
         self.state_stack.append("confirm equip")
-        self.push_menu(menu.Menu(self, item.name.upper(), [("Cancel", lambda: self.pop_menu()), ("Equip", lambda: character.equip_item(item))]))
+        def equip():
+            character.equip_item(item)
+            self.pop_menu()
+            self.pop_menu()
+        self.push_menu(menu.Menu(self, item.name.upper(), [("Cancel", lambda: self.pop_menu()), ("Equip", lambda: equip())]))
 
     def confirm_unequip_item(self, character, item):
         print(f"Confirming unequip of {item.name} for {character.name}")
         self.state_stack.append("confirm unequip")
-        self.push_menu(menu.Menu(self, item.name.upper(), [("Cancel", lambda: self.pop_menu()), ("Unequip", lambda: character.unequip_item(item))]))
+        def unequip():
+            character.unequip_item(item)
+            self.pop_menu()
+            self.pop_menu()
+        self.push_menu(menu.Menu(self, item.name.upper(), [("Cancel", lambda: self.pop_menu()), ("Unequip", lambda: unequip())]))
 
     def start_move(self, character):
         self.state_stack.append("select tile for move")
@@ -65,7 +73,6 @@ class GameManager:
         self.pending_attack = attack
         self.state_stack.append("choose attack target")
         self.push_menu(menu.Menu(self, self.pending_attack.name.upper(), [("Cancel", lambda: self.pop_menu())]))
-        #show attack range on grid
 
     def build_turn_queue(self):
         ready = [c for c in self.characters if c.cooldown == 0 and c.is_alive()]
@@ -168,8 +175,10 @@ class GameManager:
                     self.push_menu(menu.Menu(self, "MOVE", [("Done", lambda: self.end_turn())]))
 
         elif self.state_stack[-1] == "choose attack target" and self.pending_attack:
-
-            if tile and tile.character:
+            if tile and self.active_character.tile.distance_to(tile) <= self.pending_attack.range:
+                if self.pending_attack.requires_target:
+                    if not tile.character or tile.character.owner == self.active_character.owner:
+                        return
                 self.active_character.attack_target(tile.character, self.pending_attack)
                 self.pending_attack = None
                 self.pop_menu()

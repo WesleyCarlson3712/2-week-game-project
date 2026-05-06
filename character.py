@@ -50,6 +50,7 @@ class Character:
     def unequip_item(self, item):
         if item in self.items:
             self.items.remove(item)
+            self.owner.add_item(item)  # Return to player's inventory
             item.on_unequip(self)
 
     def attack_target(self, target, attack):

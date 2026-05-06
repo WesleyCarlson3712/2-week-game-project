@@ -1,7 +1,7 @@
 import random
 
 class Attack:
-    def __init__(self, name, damage_min, damage_max, cooldown, range=1, critical_chance=0, critical_multiplier=0, effects=[]):
+    def __init__(self, name, damage_min, damage_max, cooldown, range, requires_target = True, critical_chance=0, critical_multiplier=0, effects=[]):
         self.name = name
         self.damage_min = damage_min
         self.damage_max = damage_max
@@ -9,6 +9,7 @@ class Attack:
         self.critical_multiplier = critical_multiplier
         self.cooldown = cooldown
         self.range = range
+        self.requires_target = requires_target
         self.effects = effects
 
     def calculate_damage(self):
