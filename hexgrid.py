@@ -2,6 +2,7 @@ import arcade
 import gamemanager
 import math
 import tile
+import menu
 
 WIDTH = 1000
 HEIGHT = 675
@@ -28,6 +29,8 @@ class HexGrid(arcade.Window):
             [arcade.color.LIGHT_GRAY, arcade.color.DARK_GRAY, arcade.color.GRAY],
             [arcade.color.LIGHT_BLUE, arcade.color.BRIGHT_TURQUOISE, arcade.color.DIAMOND]
             ]   
+        
+        self.info_box = []
 
         self.build_grid()
         self.link_neighbors()
@@ -108,12 +111,28 @@ class HexGrid(arcade.Window):
                 arcade.draw_circle_filled(x, y, 10, arcade.color.GREEN if tile.character == self.game_manager.active_character else arcade.color.RED)
 
         if self.game_manager.state_stack[-1] == "select tile for move":
-            for tile in self.game_manager.active_character.tile.neighbors:
-                x, y = self.hex_to_pixel(tile.q, tile.r)
-                if not tile.is_obstructed():
-                    self.draw_hex(x, y, TILE_RADIUS - 1, outline_color = arcade.color.GREEN_YELLOW, outline_width = 4)
+            distance_colors = [arcade.color.YELLOW_GREEN, arcade.color.YELLOW]
 
+            for (tile, distance) in self.game_manager.active_character.tile.reachable_tiles(self.game_manager.active_character.movement_range - self.game_manager.moves_taken):
+                x, y = self.hex_to_pixel(tile.q, tile.r)
+                if distance == 0:
+                    continue
+                self.draw_hex(x, y, TILE_RADIUS - 4, outline_color = distance_colors[min(distance - 1, len(distance_colors) - 1)], outline_width = 4)
+
+
+        if self.game_manager.state_stack[-1] == "choose attack target":
+            for (q, r), tile in self.tiles.items():
+                if self.game_manager.active_character.tile.distance_to(tile) <= self.game_manager.pending_attack.range:
+                    x, y = self.hex_to_pixel(q, r)
+                    if tile.character and tile.character.owner != self.game_manager.active_character.owner:
+                        self.draw_hex(x, y, TILE_RADIUS - 1, outline_color = arcade.color.RED, outline_width = 4)
+                
     def draw_ui(self, panel_x, mid_y):
+        horaizontal_padding = (WIDTH - panel_x) / 20
+        vertical_padding = (HEIGHT - mid_y) / 40
+
+        self.info_box = [panel_x + horaizontal_padding, (HEIGHT - UI_HEADER_HEIGHT) - vertical_padding, WIDTH - horaizontal_padding, mid_y + vertical_padding]
+
         arcade.draw_lrbt_rectangle_filled(
             panel_x, WIDTH,
             0, HEIGHT,
@@ -141,18 +160,43 @@ class HexGrid(arcade.Window):
             mid_y - UI_HEADER_HEIGHT, mid_y,
             arcade.color.BLACK
         )
+        #info box
+        arcade.draw_lrbt_rectangle_filled(
+            self.info_box[0], self.info_box[2],
+            self.info_box[3], self.info_box[1],
+            arcade.color.JET
+        )
+        arcade.draw_lrbt_rectangle_outline(
+            self.info_box[0], self.info_box[2],
+            self.info_box[3], self.info_box[1],
+            arcade.color.BLACK
+        )
+
         # top box (tile info)
         arcade.draw_lrbt_rectangle_outline(
             panel_x, WIDTH,
             mid_y, HEIGHT,
             arcade.color.BLACK
         )
-
         # bottom box (menu)
         arcade.draw_lrbt_rectangle_outline(
             panel_x, WIDTH,
             0, mid_y,
             arcade.color.BLACK
+        )
+
+    def draw_info_text(self, text):
+        arcade.draw_text(
+            text[0],
+            self.info_box[0] + 10,
+            self.info_box[1] + 10,
+            arcade.color.WHITE,
+            14,
+            self.info_box[2] - self.info_box[0] - 10,
+            "left",
+            "consolas",
+            bold=True,
+            anchor_y = "top"
         )
 
     def draw_hex(self, x, y, radius, fill_color = None, outline_color = arcade.color.BLACK, outline_width = 1):
@@ -176,6 +220,7 @@ class HexGrid(arcade.Window):
         self.clear()
         self.draw_grid()
         self.draw_ui(panel_x, mid_y)
+        self.draw_info_text(self.game_manager.hovered_info)
         if self.game_manager.menu_stack:
             menu = self.game_manager.menu_stack[-1]
             # draw from panel_x, mid_y, to the bottom right corner of the screen

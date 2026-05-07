@@ -11,3 +11,22 @@ class Tile:
 
     def is_obstructed(self):
         return self.character is not None or self.obstructed
+    
+    def reachable_tiles(self, max_distance):
+        from collections import deque
+        visited = set()
+        queue = deque()
+        queue.append((self, 0))
+        visited.add(self)
+        result = set()
+
+        while queue:
+            current_tile, dist = queue.popleft()
+            if dist > max_distance:
+                continue
+            result.add((current_tile, dist))
+            for neighbor in current_tile.neighbors:
+                if neighbor not in visited and neighbor.character is None:
+                    visited.add(neighbor)
+                    queue.append((neighbor, dist + 1))
+        return result

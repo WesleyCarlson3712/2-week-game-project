@@ -5,7 +5,7 @@ import effect
 import character
 import player
 import item
-import arcade
+import time
 class GameManager:
     def __init__(self, grid):
         self.grid = grid
@@ -31,18 +31,22 @@ class GameManager:
         self.moves_taken = 0
 
         self.hovered_tile = None
+        self.hovered_info = ("info", "this window shows info about the currently hovered thing")
 
         self.turn_queue = []
 
         self.characters.append(character.Character("john", 100, self.grid.tiles[(0, 0)], 3, 10, self.players["Player"], attacks=[
-            attack.Attack("Slash", 20, 25, cooldown=2),
-            attack.Attack("Fireball", 30, 35, cooldown=3, effects=[effect.Effect("Burn", activations=5, interval=1, on_tick=lambda c: c.take_damage(5))])
+            attack.Attack("Slash", 20, 25, cooldown=2, range=1),
+            attack.Attack("Fireball", 30, 35, cooldown=3, range=3, effects=[effect.Effect("Burn", activations=5, interval=1, on_tick=lambda c: c.take_damage(5))])
         ]))
         self.characters.append(character.Character("lisa", 100, self.grid.tiles[(1, 0)], 4, 10, self.players["Player"], attacks=[
-            attack.Attack("Stomp", 25, 30, cooldown=2)
+            attack.Attack("Stomp", 25, 30, cooldown=2, range=2)
         ]))
         self.characters.append(character.Character("duck", 100, self.grid.tiles[(1, 1)], 5, 10, self.players["Player"], attacks=[
-            attack.Attack("Heal", 30, 35, cooldown=3)
+            attack.Attack("Heal", 30, 35, cooldown=3, range=1)
+        ]))
+        self.characters.append(character.Character("goblin", 80, self.grid.tiles[(-1, 0)], 3, 10, self.players["AI"], attacks=[
+            attack.Attack("Club Smash", 15, 20, cooldown=2, range=1)
         ]))
         self.start_turn_cycle()
 
@@ -121,8 +125,37 @@ class GameManager:
             menus.show_actions_menu(self, character)
         elif character.owner == self.players["AI"]:
             # AI turn
-            self.run_ai(character)
+            # self.run_ai(character)
+            self.process_ai_turn(character)
             self.end_turn()
+
+    def process_ai_turn(self, character):
+        # Very basic AI: if it can attack, it attacks. Otherwise, it moves towards the closest player character.
+        player_characters = [c for c in self.characters if c.owner == self.players["Player"] and c.is_alive()]
+        if not player_characters:
+            return  # No targets left
+
+        target = min(player_characters, key=lambda c: character.tile.distance_to(c.tile))
+
+        # Check if we can attack
+        for attack in character.attacks:
+            if character.tile.distance_to(target.tile) <= attack.range:
+                print(f"{character.name} attacks {target.name} with {attack.name}")
+                character.attack_target(target, attack)
+                return
+
+        # Move towards target
+        # This is a placeholder for pathfinding logic. For now, it just tries to move closer on the q axis.
+        if target.tile.q < character.tile.q:
+            new_tile = self.grid.tiles.get((character.tile.q - 1, character.tile.r))
+        elif target.tile.q > character.tile.q:
+            new_tile = self.grid.tiles.get((character.tile.q + 1, character.tile.r))
+        else:
+            new_tile = None
+
+        if new_tile and not new_tile.is_obstructed():
+            print(f"{character.name} moves from ({character.tile.q}, {character.tile.r}) to ({new_tile.q}, {new_tile.r})")
+            character.move(new_tile)
 
     def end_turn(self):
         print(f"Ending turn")

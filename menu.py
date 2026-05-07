@@ -1,12 +1,14 @@
 import arcade
 class Menu:
+    # Class variables for static values
+    header_font_size = 30
+    option_font_size = 20
+
     def __init__(self, game, header, options = ("", lambda: None)):
         self.game = game
         self.options = options  # (label, function)
         self.selected_index = None
         self.header = header
-        self.header_font_size = 30
-        self.option_font_size = 20
         self.option_rects = []  # to store the rectangles for each option for mouse interaction
 
     def get_option_index_at(self, x, y):
@@ -36,7 +38,7 @@ class Menu:
                 x1,
                 y1 - (header_height / 2), 
                 arcade.color.WHITE,
-                self.header_font_size,
+                Menu.header_font_size,
                 x2 - x1,
                 "center",
                 "consolas",
@@ -75,7 +77,7 @@ class Menu:
                 x1,
                 option_y,
                 color,
-                self.option_font_size,
+                Menu.option_font_size,
                 x2 - x1,
                 "center",
                 "consolas",
