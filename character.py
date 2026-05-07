@@ -8,7 +8,7 @@ class Character:
         self.health = max_health
         self.tile = tile
         self.movement_range = movement_range
-        self.move_cost = move_cost
+        self.movement_cost = move_cost
         self.owner = owner
         self.attacks = attacks
         self.abilities = abilities
@@ -26,7 +26,7 @@ class Character:
         self.tile.character = None
         target_tile.character = self
         self.tile = target_tile
-        self.apply_cooldown(self.move_cost)
+        self.apply_cooldown(self.movement_cost)
     
     def apply_cooldown(self, cooldown):
         # using this function gives room to add discounts or increases to cooldown in the future
@@ -37,8 +37,14 @@ class Character:
         if self.health < 0:
             self.health = 0
 
+    def heal(self, amount):
+        self.health += amount
+        if self.health > self.max_health:
+            self.health = self.max_health
+
     def use_ability(self, ability):
-        ability(self)
+        ability.execute()
+        self.apply_cooldown(ability.cooldown)
 
     def equip_item(self, item):
         print(f"item owner before equip: {item.owner.name if item.owner else 'None'}")
@@ -55,6 +61,7 @@ class Character:
 
     def attack_target(self, target, attack):
         attack.execute(target, self)
+        self.apply_cooldown(attack.cooldown)
 
     def is_alive(self):
         return self.health > 0

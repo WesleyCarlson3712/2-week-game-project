@@ -14,19 +14,19 @@ class Tile:
     
     def reachable_tiles(self, max_distance):
         from collections import deque
-        visited = set()
         queue = deque()
         queue.append((self, 0))
-        visited.add(self)
-        result = set()
+        shortest_distances = {self: 0}
 
         while queue:
             current_tile, dist = queue.popleft()
-            if dist > max_distance:
+            if dist >= max_distance:
                 continue
-            result.add((current_tile, dist))
             for neighbor in current_tile.neighbors:
-                if neighbor not in visited and neighbor.character is None:
-                    visited.add(neighbor)
-                    queue.append((neighbor, dist + 1))
-        return result
+                if neighbor.character is None:
+                    new_dist = dist + 1
+                    if new_dist <= max_distance and (neighbor not in shortest_distances or new_dist < shortest_distances[neighbor]):
+                        shortest_distances[neighbor] = new_dist
+                        queue.append((neighbor, new_dist))
+        # Exclude the starting tile (self) from the result
+        return [(tile, distance) for tile, distance in shortest_distances.items() if tile is not self]
