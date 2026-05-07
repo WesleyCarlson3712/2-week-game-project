@@ -19,15 +19,21 @@ GRID_ORIGIN_Y = HEIGHT // 2
 class HexGrid(arcade.Window):
     def __init__(self):
         super().__init__(WIDTH, HEIGHT, "Battle Game")
-        self.color_palette = 1
+        self.color_palette = 2
 
-        self.backgrounds = [arcade.color.LICORICE, arcade.color.BABY_BLUE]
+        self.backgrounds = [
+            arcade.color.LICORICE, 
+            arcade.color.BABY_BLUE,
+            (222, 235, 244)
+            ]
         arcade.set_background_color(self.backgrounds[self.color_palette])
 
         self.tiles = {}
         self.hex_colors = [
             [arcade.color.LIGHT_GRAY, arcade.color.DARK_GRAY, arcade.color.GRAY],
-            [arcade.color.LIGHT_BLUE, arcade.color.BRIGHT_TURQUOISE, arcade.color.DIAMOND]
+            [arcade.color.LIGHT_BLUE, arcade.color.BRIGHT_TURQUOISE, arcade.color.DIAMOND],
+            [(176, 224, 251), (164, 236, 242), (232, 246, 249)]
+            
             ]   
         
         self.info_box = []
@@ -119,7 +125,6 @@ class HexGrid(arcade.Window):
                     continue
                 self.draw_hex(x, y, TILE_RADIUS - 4, outline_color = distance_colors[min(distance - 1, len(distance_colors) - 1)], outline_width = 4)
 
-
         if self.game_manager.state_stack[-1] == "choose attack target":
             for (q, r), tile in self.tiles.items():
                 if self.game_manager.active_character.tile.distance_to(tile) <= self.game_manager.pending_attack.range:
@@ -171,7 +176,6 @@ class HexGrid(arcade.Window):
             self.info_box[3], self.info_box[1],
             arcade.color.BLACK
         )
-
         # top box (tile info)
         arcade.draw_lrbt_rectangle_outline(
             panel_x, WIDTH,
@@ -185,18 +189,33 @@ class HexGrid(arcade.Window):
             arcade.color.BLACK
         )
 
-    def draw_info_text(self, text):
+    def draw_info_text(self, text, x1, y1, x2, y2, header_height):
+        # header
         arcade.draw_text(
             text[0],
-            self.info_box[0] + 10,
-            self.info_box[1] + 10,
+            x1,
+            HEIGHT - (header_height / 2), 
             arcade.color.WHITE,
-            14,
-            self.info_box[2] - self.info_box[0] - 10,
+            menu.Menu.header_font_size,
+            x2 - x1,
+            "center",
+            "consolas",
+            bold=True,
+            anchor_y = "center"
+        )
+        #body 
+        arcade.draw_text(
+            text[1],
+            x1 + 10,
+            y1 - 10,
+            arcade.color.WHITE,
+            12,
+            x2 - x1 - 10,
             "left",
             "consolas",
             bold=True,
-            anchor_y = "top"
+            anchor_y = "top",
+            multiline=True
         )
 
     def draw_hex(self, x, y, radius, fill_color = None, outline_color = arcade.color.BLACK, outline_width = 1):
@@ -220,14 +239,11 @@ class HexGrid(arcade.Window):
         self.clear()
         self.draw_grid()
         self.draw_ui(panel_x, mid_y)
-        self.draw_info_text(self.game_manager.hovered_info)
+        self.draw_info_text(self.game_manager.hovered_info, self.info_box[0], self.info_box[1], self.info_box[2], self.info_box[3], UI_HEADER_HEIGHT)
         if self.game_manager.menu_stack:
             menu = self.game_manager.menu_stack[-1]
             # draw from panel_x, mid_y, to the bottom right corner of the screen
             menu.draw(panel_x, mid_y, WIDTH, 0, UI_HEADER_HEIGHT )
-
-    def on_key_press(self, key, modifiers):
-        self.game_manager.on_key_press(key)
 
     def on_mouse_press(self, x, y, button, modifiers):
         self.game_manager.on_mouse_press(x, y, button, modifiers)

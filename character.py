@@ -2,7 +2,7 @@ import random
 
 
 class Character:
-    def __init__(self, name, max_health, tile, movement_range, move_cost, owner, attacks = None, items = [], abilities = None):
+    def __init__(self, name, max_health, tile, movement_range, move_cost, owner, attacks=None, items=None, abilities=None):
         self.name = name
         self.max_health = max_health
         self.health = max_health
@@ -12,7 +12,7 @@ class Character:
         self.owner = owner
         self.attacks = attacks
         self.abilities = abilities
-        self.items = items
+        self.items = items if items is not None else []
         self.cooldown = 0
         self.effects = []
         self.priority = random.random()

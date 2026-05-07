@@ -1,9 +1,9 @@
 class Player:
-    def __init__(self, game, name, items=[]):
+    def __init__(self, game, name, items=None):
         self.game_manager = game
         self.name = name
         self.characters = []
-        self.items = items
+        self.items = items if items is not None else []
 
     def add_character(self, character):
         self.characters.append(character)

@@ -1,7 +1,7 @@
 import arcade
 class Menu:
     # Class variables for static values
-    header_font_size = 30
+    header_font_size = 25
     option_font_size = 20
 
     def __init__(self, game, header, options = ("", lambda: None)):

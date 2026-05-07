@@ -23,8 +23,7 @@ class GameManager:
         self.current_menu = None
 
         self.state_stack = []
-        #replace state with state stack
-        self.state = "idle"   # or "player_turn", "menu"
+        self.state = ""   # or "player_turn", "menu"
         self.active_character = None
 
         self.pending_attack = None
@@ -218,6 +217,7 @@ class GameManager:
                 self.end_turn()
 
     def on_mouse_motion(self, x, y, dx, dy):
+        self.update_info(x, y)
         q, r = self.grid.pixel_to_hex(x, y)
         tile = self.grid.tiles.get((q, r))
 
@@ -226,6 +226,30 @@ class GameManager:
             self.current_menu.selected_index = option_index
         else:
             self.current_menu.selected_index = None
-            
-    def on_key_press(self, key):
-        pass
+
+    def update_info(self, mouse_x, mouse_y):
+        q, r = self.grid.pixel_to_hex(mouse_x, mouse_y)
+        tile = self.grid.tiles.get((q, r))
+
+        if tile:
+            if tile.character:
+                character = tile.character
+                info = ""
+                info += f"Health: {character.health}/{character.max_health}\n"
+                info += f"Movement Range: {character.movement_range}\n"
+                info += f"Movement Cost: {character.move_cost}\n"
+                if character.attacks:
+                    info += "Attacks: "
+                    info += ", ".join(attack.name for attack in character.attacks)
+                if character.items:
+                    info += "\nItems: "
+                    info += ", ".join(item.name for item in character.items)
+                if character.abilities:
+                    info += "\nAbilities: "
+                    info += ", ".join(ability.name for ability in character.abilities)
+                self.hovered_info = (character.name.upper(), info)
+
+            else:
+                self.hovered_info = (f"Tile ({q}, {r})", "This tile is empty.")
+        else:
+            self.hovered_info = ("Out of bounds", "You are hovering outside of the grid.")
