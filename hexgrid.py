@@ -218,6 +218,16 @@ class HexGrid(arcade.Window):
             multiline=True
         )
 
+    def draw_stat_bar(self, character, stat, x_offset, y_offset, height):
+        x, y = self.hex_to_pixel(character.tile.q, character.tile.r)
+        if stat == "health":
+
+            arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.health / 6), (x + x_offset) + (character.health / 6), (y + y_offset) - height, (y + y_offset), arcade.color.RED)
+            arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.health / 6), (x + x_offset) + (character.health / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
+        elif stat == "cooldown":
+            arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.cooldown / 6), (x + x_offset) + (character.cooldown / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLUE)
+            arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.cooldown / 6), (x + x_offset) + (character.cooldown / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
+
     def draw_hex(self, x, y, radius, fill_color = None, outline_color = arcade.color.BLACK, outline_width = 1):
         points = []
         for i in range(6):
@@ -240,9 +250,11 @@ class HexGrid(arcade.Window):
         self.draw_grid()
         self.draw_ui(panel_x, mid_y)
         self.draw_info_text(self.game_manager.hovered_info, self.info_box[0], self.info_box[1], self.info_box[2], self.info_box[3], UI_HEADER_HEIGHT)
+        for character in self.game_manager.characters:
+            self.draw_stat_bar(character, "health", 0, -15, 5)
+            self.draw_stat_bar(character, "cooldown", 0, -25, 5)
         if self.game_manager.menu_stack:
             menu = self.game_manager.menu_stack[-1]
-            # draw from panel_x, mid_y, to the bottom right corner of the screen
             menu.draw(panel_x, mid_y, WIDTH, 0, UI_HEADER_HEIGHT )
 
     def on_mouse_press(self, x, y, button, modifiers):

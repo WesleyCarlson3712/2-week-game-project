@@ -4,11 +4,11 @@ class Menu:
     header_font_size = 25
     option_font_size = 20
 
-    def __init__(self, game, header, options = ("", lambda: None)):
+    def __init__(self, game, header, options = ("", lambda: None, "")):
         self.game = game
-        self.options = options  # (label, function)
-        self.selected_index = None
         self.header = header
+        self.options = options  # (label, function, desc)
+        self.selected_index = None
         self.option_rects = []  # to store the rectangles for each option for mouse interaction
 
     def get_option_index_at(self, x, y):
@@ -18,12 +18,12 @@ class Menu:
                 return i
 
     def select(self):
-        _, action = self.options[self.selected_index]
+        _, action, _ = self.options[self.selected_index]
         if action:
             action()
 
     def draw(self, x1, y1, x2, y2, header_height):
-
+        self.option_rects = []
         # Draw options
         height_of_options_box = y1 - header_height - y2
         top_y_of_options_box = y1 - header_height
@@ -46,7 +46,8 @@ class Menu:
                 anchor_y = "center"
             )
 
-        for i, (label, _) in enumerate(self.options):
+        for i, (label, _, _) in enumerate(self.options):
+            
             option_y = top_y_of_options_box - i * option_height - option_height / 2
             # store rects as (x1, y1, x2, y2) for mouse interaction
             self.option_rects.append((
@@ -84,3 +85,4 @@ class Menu:
                 anchor_y = "center"
 
             )
+        self.game.update_selected_option(self.game.mouse_x, self.game.mouse_y)
