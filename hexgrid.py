@@ -1,5 +1,5 @@
 import arcade 
-import gamemanager
+import game_manager
 import math
 import tile
 import menu
@@ -33,14 +33,14 @@ class HexGrid(arcade.Window):
             [arcade.color.LIGHT_GRAY, arcade.color.DARK_GRAY, arcade.color.GRAY],
             [arcade.color.LIGHT_BLUE, arcade.color.BRIGHT_TURQUOISE, arcade.color.DIAMOND],
             [(176, 224, 251), (164, 236, 242), (232, 246, 249)]
-            
+    
             ]   
         
         self.info_box = []
 
         self.build_grid()
         self.link_neighbors()
-        self.game_manager = gamemanager.GameManager(self)
+        self.game_manager = game_manager.GameManager(self)
         
     # -------------------------
     # GRID CREATION
@@ -114,23 +114,25 @@ class HexGrid(arcade.Window):
                     
             # highlight character tile
             if tile.character:
-                arcade.draw_circle_filled(x, y, 10, arcade.color.GREEN if tile.character == self.game_manager.active_character else arcade.color.RED)
+                arcade.draw_circle_filled(x, y, 10, arcade.color.GREEN if tile.character.owner.name == "Player" else arcade.color.RED)
+                if tile.character == self.game_manager.active_character:
+                    arcade.draw_circle_outline(x, y, 10, arcade.color.YELLOW)
+        if self.game_manager.state_stack:
+            if self.game_manager.state_stack[-1] == "select tile for move":
+                distance_colors = [arcade.color.YELLOW_GREEN, arcade.color.YELLOW]
 
-        if self.game_manager.state_stack[-1] == "select tile for move":
-            distance_colors = [arcade.color.YELLOW_GREEN, arcade.color.YELLOW]
+                for (tile, distance) in self.game_manager.active_character.tile.reachable_tiles(self.game_manager.active_character.movement_range - self.game_manager.moves_taken):
+                    x, y = self.hex_to_pixel(tile.q, tile.r)
+                    if distance == 0:
+                        continue
+                    self.draw_hex(x, y, TILE_RADIUS - 4, outline_color = distance_colors[min(distance - 1, len(distance_colors) - 1)], outline_width = 4)
 
-            for (tile, distance) in self.game_manager.active_character.tile.reachable_tiles(self.game_manager.active_character.movement_range - self.game_manager.moves_taken):
-                x, y = self.hex_to_pixel(tile.q, tile.r)
-                if distance == 0:
-                    continue
-                self.draw_hex(x, y, TILE_RADIUS - 4, outline_color = distance_colors[min(distance - 1, len(distance_colors) - 1)], outline_width = 4)
-
-        if self.game_manager.state_stack[-1] == "choose attack target":
-            for (q, r), tile in self.tiles.items():
-                if self.game_manager.active_character.tile.distance_to(tile) <= self.game_manager.pending_attack.range:
-                    x, y = self.hex_to_pixel(q, r)
-                    if tile.character and tile.character.owner != self.game_manager.active_character.owner:
-                        self.draw_hex(x, y, TILE_RADIUS - 1, outline_color = arcade.color.RED, outline_width = 4)
+            if self.game_manager.state_stack[-1] == "choose attack target":
+                for (q, r), tile in self.tiles.items():
+                    if self.game_manager.active_character.tile.distance_to(tile) <= self.game_manager.pending_attack.range:
+                        x, y = self.hex_to_pixel(q, r)
+                        if tile.character and tile.character.owner != self.game_manager.active_character.owner:
+                            self.draw_hex(x, y, TILE_RADIUS - 1, outline_color = arcade.color.RED, outline_width = 4)
                 
     def draw_ui(self, panel_x, mid_y):
         horaizontal_padding = (WIDTH - panel_x) / 20

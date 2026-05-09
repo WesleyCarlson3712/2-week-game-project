@@ -6,6 +6,10 @@ import character
 import player
 import item
 import ability
+import random
+from agressive_behavior import AggressiveBehavior
+from ranged_behavior import RangedBehavior
+import enemies
 class GameManager:
     def __init__(self, grid):
         self.grid = grid
@@ -27,40 +31,60 @@ class GameManager:
         self.active_character = None
 
         self.pending_attack = None
+        self.pending_item = None
+        self.pending_ability = None
         self.moves_taken = 0
 
         self.hovered_tile = None
         self.hovered_info = ("", "")
+        self.updates = []
 
         self.turn_queue = []
 
         self.mouse_x = 0
         self.mouse_y = 0
 
-        self.characters.append(character.Character("john", 100, self.grid.tiles[(0, 0)], 3, 10, self.players["Player"], 
+        self.characters.append(character.Character(self, "john", 100, self.get_random_tile(False), 3, 10, self.players["Player"], 
             attacks=[
             attack.Attack("Slash", 20, 25, cooldown=60, range=1),
-            attack.Attack("Fireball", 30, 35, cooldown=60, range=3, effects=[effect.Effect("Burn", activations=5, interval=1, on_tick=lambda c: c.take_damage(5))])
+            attack.Attack("Fireball", 30, 35, cooldown=60, range=3, effects=[effect.Effect(self, "Burning", activations=5, interval=10, on_tick=lambda c: c.take_damage(5))])
         ], abilities=[ability.Ability("Heal", 20, lambda: self.active_character.heal(20), "Heal 20 hp")
         ]
         ))
-        self.characters.append(character.Character("lisa", 100, self.grid.tiles[(1, 0)], 4, 10, self.players["Player"], 
+        self.characters.append(character.Character(self, "lisa", 100, self.get_random_tile(False), 4, 10, self.players["Player"], 
             attacks=[
             attack.Attack("Stomp", 25, 30, cooldown=60, range=2)
         ]
         ))
-        self.characters.append(character.Character("duck", 100, self.grid.tiles[(1, 1)], 5, 10, self.players["Player"], 
+        self.characters.append(character.Character(self, "duck", 100, self.get_random_tile(False), 5, 10, self.players["Player"], 
             attacks=[
             attack.Attack("Stab", 30, 35, cooldown=60, range=1)
         ]
         ))
-        self.characters.append(character.Character("goblin", 80, self.grid.tiles[(-1, 0)], 3, 10, self.players["AI"], 
-            attacks=[
-            attack.Attack("Club Smash", 15, 20, cooldown=60, range=1)
-        ]
-        ))
+        self.spawn_enemy("goblin")
+        self.spawn_enemy("archer")
         self.start_turn_cycle()
         self.update_info(self.mouse_x, self.mouse_y)
+
+    def spawn_enemy(self, type_name, tile=None, owner=None):
+            if owner is None:
+                owner = self.players["AI"]
+            if tile is None:
+                tile = self.get_random_tile(False)
+            enemy_factory = enemies.enemy_types.get(type_name)
+            if not enemy_factory:
+                return None
+            enemy = enemy_factory(self, tile, owner)
+            self.characters.append(enemy)
+            return enemy
+
+    def get_random_tile(self, allow_obstructed=True):
+        tiles = list(self.grid.tiles.values())
+        if not allow_obstructed:
+            tiles = [t for t in tiles if not t.is_obstructed()]
+        if not tiles:
+            return None
+        return random.choice(tiles)
 
 # --------------------------------------------------------------------------------------------------
 
@@ -78,6 +102,8 @@ class GameManager:
         self.current_menu = menu
 
     def pop_menu(self):
+        self.pending_ability = None
+        self.pending_item = None
         if self.menu_stack:
             if self.state_stack[-1] == "actions menu":
                 return
@@ -108,47 +134,20 @@ class GameManager:
                         character.remove_effect(effect)
 
     def process_next_turn(self):
-        print (f"Cooldowns: {[ (c.name, c.cooldown, c.health, c.is_alive()) for c in self.characters ]}")
         character = self.turn_queue[0]
-        print(f"Processing turn for {character.name}")
-        print(f"tile: {character.tile.q}, {character.tile.r}")
+        self.active_character = character
 
         if character.owner == self.players["Player"]:
-            self.active_character = character
             menus.show_actions_menu(self, character)
         elif character.owner == self.players["AI"]:
             # AI turn
-            # self.run_ai(character)
+            self.state_stack.append("begin enemy turn")
             self.process_ai_turn(character)
             self.end_turn()
 
     def process_ai_turn(self, character):
-        # Very basic AI: if it can attack, it attacks. Otherwise, it moves towards the closest player character.
-        player_characters = [c for c in self.characters if c.owner == self.players["Player"] and c.is_alive()]
-        if not player_characters:
-            return  # No targets left
-
-        target = min(player_characters, key=lambda c: character.tile.distance_to(c.tile))
-
-        # Check if we can attack
-        for attack in character.attacks:
-            if character.tile.distance_to(target.tile) <= attack.range:
-                print(f"{character.name} attacks {target.name} with {attack.name}")
-                character.attack_target(target, attack)
-                return
-
-        # Move towards target
-        # This is a placeholder for pathfinding logic. For now, it just tries to move closer on the q axis.
-        if target.tile.q < character.tile.q:
-            new_tile = self.grid.tiles.get((character.tile.q - 1, character.tile.r))
-        elif target.tile.q > character.tile.q:
-            new_tile = self.grid.tiles.get((character.tile.q + 1, character.tile.r))
-        else:
-            new_tile = None
-
-        if new_tile and not new_tile.is_obstructed():
-            print(f"{character.name} moves from ({character.tile.q}, {character.tile.r}) to ({new_tile.q}, {new_tile.r})")
-            character.move(new_tile)
+        if character.behavior:
+            character.behavior.take_turn(self, character)
 
     def end_turn(self):
         self.state_stack.clear()
@@ -157,9 +156,17 @@ class GameManager:
         if self.turn_queue:
             self.turn_queue.pop(0)
             self.active_character = None
-            
+
         if self.turn_queue:
-            self.process_next_turn()
+            def continue_to_next_turn():
+                self.updates.clear()
+                self.pop_menu()
+                self.process_next_turn()
+            if self.updates:
+                self.state_stack.append("turn about to start")
+                self.push_menu(menu.Menu(self, "TURN END1", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
+            else:
+                self.process_next_turn()
         else:
             for character in self.characters:
                 if character.cooldown > 0:
@@ -171,7 +178,15 @@ class GameManager:
         self.tick += 1
         self.build_turn_queue()
         if self.turn_queue:
-            self.process_next_turn()
+            def continue_to_next_turn():
+                self.updates.clear()
+                self.pop_menu()
+                self.process_next_turn()
+            if self.updates:
+                self.state_stack.append("turn about to start")
+                self.push_menu(menu.Menu(self, "TURN END1", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
+            else:
+                self.process_next_turn()
         else:
             self.end_turn()
 
@@ -193,9 +208,13 @@ class GameManager:
                 self.active_character.move(tile)
                 self.moves_taken += 1
                 if self.moves_taken >= self.active_character.movement_range:
+                    self.updates.append(f"{self.active_character.name} moves to tile {self.active_character.tile.q}, {self.active_character.tile.r}.")
                     self.end_turn()
                 if self.moves_taken == 1:
-                    self.push_menu(menu.Menu(self, "MOVE", [("Done", lambda: self.end_turn(), "End turn.")]))
+                    def done_moving(game):
+                        game.updates.append(f"{game.active_character.name} moves to tile {self.active_character.tile.q}, {self.active_character.tile.r}.")
+                        game.end_turn()
+                    self.push_menu(menu.Menu(self, "MOVE", [("Done", lambda: done_moving(self), "End turn.")]))
 
         elif self.state_stack[-1] == "choose attack target" and self.pending_attack:
             if tile and self.active_character.tile.distance_to(tile) <= self.pending_attack.range:
@@ -217,7 +236,6 @@ class GameManager:
     def on_mouse_motion(self, x, y, dx, dy):
         self.mouse_x = x
         self.mouse_y = y
-        self.update_info(x, y)        
 
     def update_info(self, mouse_x, mouse_y):
         q, r = self.grid.pixel_to_hex(mouse_x, mouse_y)
@@ -241,7 +259,56 @@ class GameManager:
                 info += "\nAbilities: "
                 info += ", ".join(ability.name for ability in character.abilities)
             return header, info
+        
+        def display_default_info(self):
+            # if you are hovering over neither a menu option or a tile
+            header = "" 
+            info = ""
+            if self.state_stack[-1] == "turn about to start":
+                header = "UPDATES"
+                info = "\n".join(self.updates) if self.updates else "No updates."
+            else:
+                if self.state_stack:
+                    header, info = display_character_stats(self, self.active_character)
 
+                    if self.state_stack[-1] == "select tile for move":
+                        header = "MOVE"
+                        info = f"Green tiles are reachable in one move.\n\
+                            Yellow tiles can be reached this turn\n\
+                            Movement cost: {self.active_character.movement_cost}\n\
+                            Movement range: {self.active_character.movement_range}"
+                    elif self.state_stack[-1] == "choose attack":
+                        header = "ATTACK"
+                        info = "Choose attack." if self.active_character.attacks else "No attacks available." 
+                    elif self.state_stack[-1] == "choose attack target":
+                        header = self.pending_attack.name
+                        info = self.pending_attack.description
+                        if not self.active_character.get_enemies_in_range(self.pending_attack.range):
+                            info += "\nNO ENEMIES IN RANGE"
+
+                    elif self.state_stack[-1] == "abilities menu":
+                        header = "ABILITIES"
+                        info = "Choose ability." if self.active_character.abilities else "No abilities available."
+                    elif self.state_stack[-1] == "confirm use ability":
+                        header = self.pending_ability.name
+                        info = self.pending_ability.description
+
+                    elif self.state_stack[-1] == "inventory menu":
+                        header = "INVENTORY"
+                        info = "Equip items from your party's collective inventory, or unequip items."
+                    elif self.state_stack[-1] == "equip menu":
+                        header = "EQUIP ITEM"
+                        info = "Choose an item to equip." if self.active_character.owner.items else "Inventory empty; no items to equip."
+                    elif self.state_stack[-1] == "confirm equip":
+                        header = self.pending_item.name
+                        info = self.pending_item.description
+                    elif self.state_stack[-1] == "unequip menu":
+                        header = "UNEQUIP ITEM"
+                        info = "Choose an item to equip." if self.active_character.items else "Inventory empty. no items to unequip."
+                    elif self.state_stack[-1] == "unconfirm equip":
+                        header = self.pending_item.name
+                        info = self.pending_item.description
+            return header, info
 
         if tile:
             # if you are hovering over a tile
@@ -249,8 +316,8 @@ class GameManager:
                 header, info = display_character_stats(self, tile.character)
                 
             else:
-                header = f"Tile ({q}, {r})"
                 if self.state_stack[-1] == "select tile for move":
+                    header = f"Tile ({tile.q}, {tile.r})"
                     character = self.active_character
                     reachable_tiles = {}
                     for (reachable_tile, distance) in character.tile.reachable_tiles(character.movement_range - self.moves_taken):
@@ -266,26 +333,15 @@ class GameManager:
                     else:
                         info = "Tile out of range"
                 else:
-                    info = "Tile is empty."
+                    header, info = display_default_info(self)
 
         elif self.current_menu and self.current_menu.selected_index is not None:
             # if you are hovering over a menu option
                 option_text, _, description = self.current_menu.options[self.current_menu.selected_index]
                 header = option_text.upper()
                 info = description
-                
+   
         else:
-            header, info = display_character_stats(self, self.active_character)
-            # if you are hovering over neither a menu option or a tile
-            if self.state_stack[-1] == "select tile for move":
-                header = "MOVE"
-                info = f"Green tiles are reachable in one move.\n\
-                    Yellow tiles can be reached this turn\n\
-                    Movement cost: {self.active_character.movement_cost}\n\
-                    Movement range: {self.active_character.movement_range}"
-            elif self.state_stack[-1] == "choose attack":
-                header = "ATTACK"
-                info = "Choose attack."
-
-
+            header, info = display_default_info(self)
+            
         self.hovered_info = (header, info)

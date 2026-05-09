@@ -86,3 +86,4 @@ class Menu:
 
             )
         self.game.update_selected_option(self.game.mouse_x, self.game.mouse_y)
+        self.game.update_info(self.game.mouse_x, self.game.mouse_y)

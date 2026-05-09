@@ -2,7 +2,8 @@ import random
 
 
 class Character:
-    def __init__(self, name, max_health, tile, movement_range, move_cost, owner, attacks=None, items=None, abilities=None):
+    def __init__(self, game, name, max_health, tile, movement_range, move_cost, owner, behavior = None, attacks=None, items=None, abilities=None):
+        self.game = game
         self.name = name
         self.max_health = max_health
         self.health = max_health
@@ -10,6 +11,7 @@ class Character:
         self.movement_range = movement_range
         self.movement_cost = move_cost
         self.owner = owner
+        self.behavior = behavior
         self.attacks = attacks
         self.abilities = abilities
         self.items = items if items is not None else []
@@ -36,14 +38,17 @@ class Character:
         self.health -= damage
         if self.health < 0:
             self.health = 0
+        self.game.updates.append(f"{self.name} takes {damage} damage. ({self.health}/{self.max_health} HP left)")
 
     def heal(self, amount):
         self.health += amount
         if self.health > self.max_health:
             self.health = self.max_health
+        self.game.updates.append(f"{self.name} heals {amount} HP. ({self.health}/{self.max_health} HP)")
 
     def use_ability(self, ability):
         ability.execute()
+        self.game.updates.append(f"{self.name} uses {ability.name}.")
         self.apply_cooldown(ability.cooldown)
 
     def equip_item(self, item):
@@ -60,6 +65,7 @@ class Character:
             item.on_unequip(self)
 
     def attack_target(self, target, attack):
+        self.game.updates.append(f"{self.name} uses {attack.name} on {target.name}.")
         attack.execute(target, self)
         self.apply_cooldown(attack.cooldown)
 
@@ -69,6 +75,7 @@ class Character:
     def apply_effect(self, effect):
         self.effects.append(effect)
         effect.on_start(self)
+        self.game.updates.append(f"{self.name} is affected with {effect.name}.")
 
     def remove_effect(self, effect, trigger_on_end=True):
         if effect in self.effects:
@@ -77,3 +84,12 @@ class Character:
             else:
                 effect.cleanup(self)
             self.effects.remove(effect)
+
+    def get_enemies_in_range(self, range):
+        enemies_in_range = []
+        for c in self.game.characters:
+            if c is not self and c.owner != self.owner and c.is_alive():
+                if self.tile.distance_to(c.tile) <= range:
+                    enemies_in_range.append(c)
+        return enemies_in_range
+     

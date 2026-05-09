@@ -38,6 +38,7 @@ def show_abilities_menu(game, character):
     game.push_menu(abilities_menu)
 
 def execute_ability(game, ability, character):
+    game.pending_ability = ability
     def use_ability(game, ability, character):
         character.use_ability(ability)
         game.end_turn()
@@ -61,7 +62,6 @@ def show_inventory_menu(game, character):
             ("Unequip Item", lambda: show_unequip_menu(game, character), "Unquip items from this character.")
         ] 
     )
-    print(character.owner.items)
     game.state_stack.append("inventory menu")
     game.push_menu(inventory_menu)
 
@@ -81,6 +81,7 @@ def show_equip_menu(game, character):
     game.push_menu(equip_menu)
 
 def confirm_equip_item(game, character, item):
+    game.pending_item = item
     game.state_stack.append("confirm equip")
     def equip():
         character.equip_item(item)
@@ -104,7 +105,7 @@ def show_unequip_menu(game, character):
     game.push_menu(unequip_menu)
 
 def confirm_unequip_item(game, character, item):
-    print(f"Confirming unequip of {item.name} for {character.name}")
+    game.pending_item = item
     game.state_stack.append("confirm unequip")
     def unequip():
         character.unequip_item(item)
