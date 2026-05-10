@@ -36,8 +36,7 @@ class AggressiveBehavior(AIBehavior):
 
                 if attacks:
                     break
-                
+
             if(moves_remaining != character.movement_range):
                 # character moved
                 game_manager.updates.append(f"{character.name} moves to tile {character.tile.q}, {character.tile.r}.")
-        game_manager.end_turn()

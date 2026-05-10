@@ -7,6 +7,7 @@ import player
 import item
 import ability
 import random
+import wave
 from agressive_behavior import AggressiveBehavior
 from ranged_behavior import RangedBehavior
 import enemies
@@ -44,10 +45,20 @@ class GameManager:
         self.mouse_x = 0
         self.mouse_y = 0
 
+        self.wave_number = 0
+        self.waves = [
+            wave.Wave(self, ["archer", "goblin"], [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
+            wave.Wave(self, ["archer", "archer", "goblin", "goblin"], [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
+            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_melee"], [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
+            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_ranged", "ice_elemental_melee", "ice_elemental_melee"], [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
+            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_melee"]),
+            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_ranged", "fire_elemental_melee", "fire_elemental_melee"])
+            ]
+
         self.characters.append(character.Character(self, "john", 100, self.get_random_tile(False), 3, 10, self.players["Player"], 
             attacks=[
             attack.Attack("Slash", 20, 25, cooldown=60, range=1),
-            attack.Attack("Fireball", 30, 35, cooldown=60, range=3, effects=[effect.Effect(self, "Burning", activations=5, interval=10, on_tick=lambda c: c.take_damage(5))])
+            attack.Attack("Fireball", 30, 35, cooldown=60, range=3, effects=[effect.Effect(self, "Burning", activations=5, interval=10, on_tick=lambda c: c.take_damage(5), on_tick_update="Burning activates")])
         ], abilities=[ability.Ability("Heal", 20, lambda: self.active_character.heal(20), "Heal 20 hp")
         ]
         ))
@@ -61,24 +72,18 @@ class GameManager:
             attack.Attack("Stab", 30, 35, cooldown=60, range=1)
         ]
         ))
-        self.spawn_enemy("goblin")
-        self.spawn_enemy("archer")
+        
+        self.waves[self.wave_number].begin_wave()
         self.start_turn_cycle()
         self.update_info(self.mouse_x, self.mouse_y)
 
-    def spawn_enemy(self, type_name, tile=None, owner=None):
-            if owner is None:
-                owner = self.players["AI"]
-            if tile is None:
-                tile = self.get_random_tile(False)
-            enemy_factory = enemies.enemy_types.get(type_name)
-            if not enemy_factory:
-                return None
-            enemy = enemy_factory(self, tile, owner)
-            self.characters.append(enemy)
-            return enemy
+    def all_enemies_dead(self):
+        for character in self.characters:
+            if character.owner == self.players["AI"]:
+                return False
+        return True
 
-    def get_random_tile(self, allow_obstructed=True):
+    def get_random_tile(self, allow_obstructed=False):
         tiles = list(self.grid.tiles.values())
         if not allow_obstructed:
             tiles = [t for t in tiles if not t.is_obstructed()]
@@ -128,8 +133,8 @@ class GameManager:
                 ticks_since_start = self.tick - effect.start_tick
 
                 if ticks_since_start >= effect.delay:
-                    if ticks_since_start - effect.delay % effect.interval == 0:
-                        effect.on_tick(character)
+                    if (ticks_since_start - effect.delay) % effect.interval == 0:
+                        effect.on_tick(self, character)
                     if ticks_since_start >= effect.delay + effect.interval * effect.activations:
                         character.remove_effect(effect)
 
@@ -156,26 +161,34 @@ class GameManager:
         if self.turn_queue:
             self.turn_queue.pop(0)
             self.active_character = None
-
-        if self.turn_queue:
+            
             def continue_to_next_turn():
                 self.updates.clear()
                 self.pop_menu()
-                self.process_next_turn()
-            if self.updates:
-                self.state_stack.append("turn about to start")
-                self.push_menu(menu.Menu(self, "TURN END1", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
-            else:
-                self.process_next_turn()
+                if self.turn_queue:
+                    self.process_next_turn()
+                else:
+                    self.end_of_turn_cycle()
+            self.state_stack.append("turn just ended")
+            self.push_menu(menu.Menu(self, "TURN END", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
+            if self.all_enemies_dead():
+                self.wave_number += 1
+                self.updates.append(f"Beginning wave {self.wave_number}")
+                self.waves[self.wave_number].begin_wave()
+            
         else:
-            for character in self.characters:
-                if character.cooldown > 0:
-                    character.cooldown -= 1
-            self.tick_effects(self.characters)
-            self.start_turn_cycle()
+            self.end_of_turn_cycle()
+
+    def end_of_turn_cycle(self):
+        self.tick += 1
+        for character in self.characters:
+            if character.cooldown > 0:
+                character.cooldown -= 1
+        self.tick_effects(self.characters)
+        self.start_turn_cycle()
 
     def start_turn_cycle(self):
-        self.tick += 1
+        
         self.build_turn_queue()
         if self.turn_queue:
             def continue_to_next_turn():
@@ -184,11 +197,11 @@ class GameManager:
                 self.process_next_turn()
             if self.updates:
                 self.state_stack.append("turn about to start")
-                self.push_menu(menu.Menu(self, "TURN END1", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
+                self.push_menu(menu.Menu(self, "TURN END", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
             else:
                 self.process_next_turn()
         else:
-            self.end_turn()
+            self.end_of_turn_cycle()
 
 # --------------------------------------------------------------------------------------------------
 
@@ -196,7 +209,6 @@ class GameManager:
 
         q, r = self.grid.pixel_to_hex(x, y)
         tile = self.grid.tiles.get((q, r))
-        print(f"Clicked on tile: {q}, {r}" if (q, r) in self.grid.tiles else "Clicked outside of grid")
 
         option_index = self.current_menu.get_option_index_at(x, y)
         if option_index is not None:
@@ -258,13 +270,16 @@ class GameManager:
             if character.abilities:
                 info += "\nAbilities: "
                 info += ", ".join(ability.name for ability in character.abilities)
+            if character.effects:
+                info += "\nEffects: "
+                info += ", ".join(effect.name for effect in character.effects)
             return header, info
         
         def display_default_info(self):
             # if you are hovering over neither a menu option or a tile
             header = "" 
             info = ""
-            if self.state_stack[-1] == "turn about to start":
+            if self.state_stack[-1] == "turn about to start" or self.state_stack[-1] == "turn just ended":
                 header = "UPDATES"
                 info = "\n".join(self.updates) if self.updates else "No updates."
             else:

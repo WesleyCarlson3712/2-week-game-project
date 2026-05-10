@@ -12,28 +12,28 @@ class Effect:
         # the tick the game was on when this effect was applied. on_tick runs when (current_tick - start_tick) % interval == 0
         self.start_tick = 0
 
-        self.on_start = on_start or (lambda character: None)
-        self.on_tick = on_tick or (lambda character: None)
-        self.on_end = on_end or (lambda character: None)
-        self.cleanup = cleanup or (lambda character: None)
+        self.on_start_lambda = on_start or (lambda character: None)
+        self.on_tick_lambda = on_tick or (lambda character: None)
+        self.on_end_lambda = on_end or (lambda character: None)
+        self.cleanup_lambda = cleanup or (lambda character: None)
 
     def on_start(self, character):
         # what happens to a character when they receive this effect
         if self.on_start:
-            self.on_start(character)
+            self.on_start_lambda(character)
 
     def on_tick(self, game, character):
         # what happens to a character every time the effect activates
         game.updates.append(self.on_tick_update)
         if self.on_tick:
-            self.on_tick(character) 
+            self.on_tick_lambda(character) 
 
     def on_end(self, character):
         # what happens to a character when the effect ends
         if self.on_end:
-            self.on_end(character)
-        self.cleanup(character)
+            self.on_end_lambda(character)
+        self.cleanup_lambda(character)
 
     def cleanup(self, character):
         if self.cleanup:
-            self.cleanup(character)
+            self.cleanup_lambda(character)

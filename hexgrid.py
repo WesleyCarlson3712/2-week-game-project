@@ -19,29 +19,18 @@ GRID_ORIGIN_Y = HEIGHT // 2
 class HexGrid(arcade.Window):
     def __init__(self):
         super().__init__(WIDTH, HEIGHT, "Battle Game")
-        self.color_palette = 2
-
-        self.backgrounds = [
-            arcade.color.LICORICE, 
-            arcade.color.BABY_BLUE,
-            (222, 235, 244)
-            ]
-        arcade.set_background_color(self.backgrounds[self.color_palette])
 
         self.tiles = {}
-        self.hex_colors = [
-            [arcade.color.LIGHT_GRAY, arcade.color.DARK_GRAY, arcade.color.GRAY],
-            [arcade.color.LIGHT_BLUE, arcade.color.BRIGHT_TURQUOISE, arcade.color.DIAMOND],
-            [(176, 224, 251), (164, 236, 242), (232, 246, 249)]
-    
-            ]   
-        
         self.info_box = []
-
         self.build_grid()
         self.link_neighbors()
+        self.color_palette = [(0,0,0),(0,0,0),(0,0,0)]
         self.game_manager = game_manager.GameManager(self)
         
+    def update_colors(self, tile_colors, background_color):
+        arcade.set_background_color(background_color)
+        self.color_palette = tile_colors
+
     # -------------------------
     # GRID CREATION
     # -------------------------
@@ -108,15 +97,15 @@ class HexGrid(arcade.Window):
     def draw_grid(self): 
         for tile in self.tiles.values():
             x, y = self.hex_to_pixel(tile.q, tile.r)
-            color = self.hex_colors[self.color_palette][(tile.q - tile.r) % 3]
+            color = self.color_palette[(tile.q - tile.r) % 3]
 
             self.draw_hex(x, y, TILE_RADIUS, color)
                     
             # highlight character tile
             if tile.character:
-                arcade.draw_circle_filled(x, y, 10, arcade.color.GREEN if tile.character.owner.name == "Player" else arcade.color.RED)
+                arcade.draw_circle_filled(x, y, 16, arcade.color.BLUE if tile.character.owner.name == "Player" else arcade.color.RED)
                 if tile.character == self.game_manager.active_character:
-                    arcade.draw_circle_outline(x, y, 10, arcade.color.YELLOW)
+                    arcade.draw_circle_outline(x, y, 16, arcade.color.GREEN)
         if self.game_manager.state_stack:
             if self.game_manager.state_stack[-1] == "select tile for move":
                 distance_colors = [arcade.color.YELLOW_GREEN, arcade.color.YELLOW]
@@ -223,12 +212,17 @@ class HexGrid(arcade.Window):
     def draw_stat_bar(self, character, stat, x_offset, y_offset, height):
         x, y = self.hex_to_pixel(character.tile.q, character.tile.r)
         if stat == "health":
-
-            arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.health / 6), (x + x_offset) + (character.health / 6), (y + y_offset) - height, (y + y_offset), arcade.color.RED)
-            arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.health / 6), (x + x_offset) + (character.health / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
+            if character.health:
+                arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.health / 4), (x + x_offset) + (character.health / 4), (y + y_offset) - height, (y + y_offset), arcade.color.RED)
+                arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.health / 4), (x + x_offset) + (character.health / 4), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
         elif stat == "cooldown":
-            arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.cooldown / 6), (x + x_offset) + (character.cooldown / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLUE)
-            arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.cooldown / 6), (x + x_offset) + (character.cooldown / 6), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
+            if character.cooldown:
+                arcade.draw_lrbt_rectangle_filled((x + x_offset) - (character.cooldown / 4), (x + x_offset) + (character.cooldown / 4), (y + y_offset) - height, (y + y_offset), arcade.color.BLUE)
+                arcade.draw_lrbt_rectangle_outline((x + x_offset) - (character.cooldown / 4), (x + x_offset) + (character.cooldown / 4), (y + y_offset) - height, (y + y_offset), arcade.color.BLACK)
+    
+    def draw_name(self, character, x_offset, y_offset, size):
+        x, y = self.hex_to_pixel(character.tile.q, character.tile.r)
+        arcade.draw_text(character.name, x + x_offset, y + y_offset, arcade.color.BLACK, size, 0, "center", anchor_x="center", anchor_y="center")
 
     def draw_hex(self, x, y, radius, fill_color = None, outline_color = arcade.color.BLACK, outline_width = 1):
         points = []
@@ -253,8 +247,9 @@ class HexGrid(arcade.Window):
         self.draw_ui(panel_x, mid_y)
         self.draw_info_text(self.game_manager.hovered_info, self.info_box[0], self.info_box[1], self.info_box[2], self.info_box[3], UI_HEADER_HEIGHT)
         for character in self.game_manager.characters:
-            self.draw_stat_bar(character, "health", 0, -15, 5)
-            self.draw_stat_bar(character, "cooldown", 0, -25, 5)
+            self.draw_stat_bar(character, "health", 0, -20, 5)
+            self.draw_stat_bar(character, "cooldown", 0, -30, 5)
+            self.draw_name(character, 0, 30, 12)
         if self.game_manager.menu_stack:
             menu = self.game_manager.menu_stack[-1]
             menu.draw(panel_x, mid_y, WIDTH, 0, UI_HEADER_HEIGHT )

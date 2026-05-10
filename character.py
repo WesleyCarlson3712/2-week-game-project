@@ -35,10 +35,18 @@ class Character:
         self.cooldown += cooldown
 
     def take_damage(self, damage):
-        self.health -= damage
+        self.health -= round(damage)
         if self.health < 0:
             self.health = 0
         self.game.updates.append(f"{self.name} takes {damage} damage. ({self.health}/{self.max_health} HP left)")
+        if not self.is_alive():
+            # Remove from tile
+            if self.tile and self.tile.character is self:
+                self.tile.character = None
+            # Remove from game character list
+            if self in self.game.characters:    
+                self.game.characters.remove(self)
+            self.game.updates.append(f"{self.name} has been defeated!")
 
     def heal(self, amount):
         self.health += amount
@@ -52,9 +60,7 @@ class Character:
         self.apply_cooldown(ability.cooldown)
 
     def equip_item(self, item):
-        print(f"item owner before equip: {item.owner.name if item.owner else 'None'}")
         item.owner.remove_item(item)  # Remove from player's inventory
-        print(f"Equipping {item.name} to {self.name}")
         self.items.append(item) # Add to character's equipped items
         item.on_equip(self)
     
@@ -73,6 +79,7 @@ class Character:
         return self.health > 0
 
     def apply_effect(self, effect):
+        effect.start_tick = self.game.tick
         self.effects.append(effect)
         effect.on_start(self)
         self.game.updates.append(f"{self.name} is affected with {effect.name}.")
