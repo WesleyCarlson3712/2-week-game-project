@@ -1,16 +1,11 @@
 import menu
 import menus
-import attack
-import effect
-import character
 import player
 import item
-import ability
+import player_characters
 import random
+import ability
 import wave
-from agressive_behavior import AggressiveBehavior
-from ranged_behavior import RangedBehavior
-import enemies
 class GameManager:
     def __init__(self, grid):
         self.grid = grid
@@ -19,8 +14,6 @@ class GameManager:
             "Player": player.Player(self, "Player"), 
             "AI": player.Player(self, "AI")
             }
-        self.players["Player"].add_item(item.Item("Health Ring", "Increases max health by 20 points.", on_equip=lambda c: setattr(c, 'max_health', c.max_health + 20), on_unequip=lambda c: setattr(c, 'max_health', c.max_health - 20)))
-        self.players["Player"].add_item(item.Item("Speed Boots", "Increases max movement distance by 1.", on_equip=lambda c: setattr(c, 'movement_range', c.movement_range + 1), on_unequip=lambda c: setattr(c, 'movement_range', c.movement_range - 1)))
         self.characters = []
         self.tick = 0
 
@@ -47,31 +40,25 @@ class GameManager:
 
         self.wave_number = 0
         self.waves = [
-            wave.Wave(self, ["archer", "goblin"], [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
-            wave.Wave(self, ["archer", "archer", "goblin", "goblin"], [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
-            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_melee"], [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
-            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_ranged", "ice_elemental_melee", "ice_elemental_melee"], [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
-            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_melee"]),
-            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_ranged", "fire_elemental_melee", "fire_elemental_melee"])
+            wave.Wave(self, ["archer", "goblin"], "music/normal.mp3", [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
+            wave.Wave(self, ["archer", "archer", "goblin", "goblin"], None, [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
+            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_melee"], "music/ice.mp3", [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
+            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_ranged", "ice_elemental_melee", "ice_elemental_melee"], None, [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
+            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_melee"], "music/fire.mp3", [(165, 22, 0), (198, 82, 0), (160, 58, 17)], (93, 22, 0)),
+            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_ranged", "fire_elemental_melee", "fire_elemental_melee"], None, [(165, 22, 0), (198, 82, 0), (160, 58, 17)], (93, 22, 0))
             ]
+        
 
-        self.characters.append(character.Character(self, "john", 100, self.get_random_tile(False), 3, 10, self.players["Player"], 
-            attacks=[
-            attack.Attack("Slash", 20, 25, cooldown=60, range=1),
-            attack.Attack("Fireball", 30, 35, cooldown=60, range=3, effects=[effect.Effect(self, "Burning", activations=5, interval=10, on_tick=lambda c: c.take_damage(5), on_tick_update="Burning activates")])
-        ], abilities=[ability.Ability("Heal", 20, lambda: self.active_character.heal(20), "Heal 20 hp")
-        ]
-        ))
-        self.characters.append(character.Character(self, "lisa", 100, self.get_random_tile(False), 4, 10, self.players["Player"], 
-            attacks=[
-            attack.Attack("Stomp", 25, 30, cooldown=60, range=2)
-        ]
-        ))
-        self.characters.append(character.Character(self, "duck", 100, self.get_random_tile(False), 5, 10, self.players["Player"], 
-            attacks=[
-            attack.Attack("Stab", 30, 35, cooldown=60, range=1)
-        ]
-        ))
+        self.items = {
+            "Health ring": item.Item("Health Ring", "Increases max health by 20 points.", on_equip=lambda c: setattr(c, 'max_health', c.max_health + 20), on_unequip=lambda c: setattr(c, 'max_health', c.max_health - 20)),
+            "Speed boots": item.Item("Speed Boots", "Increases max movement distance by 1.", on_equip=lambda c: setattr(c, 'movement_range', c.movement_range + 1), on_unequip=lambda c: setattr(c, 'movement_range', c.movement_range - 1)),
+            # "Health potion": item.Item("Health Potion", "Heals 40 hp (used as an ability).", on_equip=lambda c: c.abilities.append(ability.Ability("Health Potion", 1, lambda: self.active_character.heal(40))), on_unequip=lambda c: c.abilities.pop()) 
+        }
+        self.players["Player"].add_item(self.items["Health ring"])
+        self.players["Player"].add_item(self.items["Speed boots"])
+        self.characters.append(player_characters.create_warrior(self))
+        self.characters.append(player_characters.create_wizard(self))
+        self.characters.append(player_characters.create_ranger(self))
         
         self.waves[self.wave_number].begin_wave()
         self.start_turn_cycle()
@@ -134,7 +121,8 @@ class GameManager:
 
                 if ticks_since_start >= effect.delay:
                     if (ticks_since_start - effect.delay) % effect.interval == 0:
-                        effect.on_tick(self, character)
+                        self.updates.append(f"{effect.name} triggers for {character.name}.")
+                        effect.on_tick(character)
                     if ticks_since_start >= effect.delay + effect.interval * effect.activations:
                         character.remove_effect(effect)
 
@@ -171,10 +159,6 @@ class GameManager:
                     self.end_of_turn_cycle()
             self.state_stack.append("turn just ended")
             self.push_menu(menu.Menu(self, "TURN END", [("Continue", lambda: continue_to_next_turn(), "Continue to the next turn.")]))
-            if self.all_enemies_dead():
-                self.wave_number += 1
-                self.updates.append(f"Beginning wave {self.wave_number}")
-                self.waves[self.wave_number].begin_wave()
             
         else:
             self.end_of_turn_cycle()
@@ -185,6 +169,12 @@ class GameManager:
             if character.cooldown > 0:
                 character.cooldown -= 1
         self.tick_effects(self.characters)
+        if self.all_enemies_dead():
+                if self.wave_number < len(self.waves):
+                    # self.players["Player"].add_item(self.items["Health potion"])
+                    self.wave_number += 1
+                    self.updates.append(f"Wave {self.wave_number + 1}")
+                    self.waves[self.wave_number].begin_wave()
         self.start_turn_cycle()
 
     def start_turn_cycle(self):

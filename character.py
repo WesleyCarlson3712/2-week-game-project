@@ -2,7 +2,7 @@ import random
 
 
 class Character:
-    def __init__(self, game, name, max_health, tile, movement_range, move_cost, owner, behavior = None, attacks=None, items=None, abilities=None):
+    def __init__(self, game, name, max_health, tile, movement_range, move_cost, owner, behavior = None, attacks=None, items=None, abilities=None, resistance = None):
         self.game = game
         self.name = name
         self.max_health = max_health
@@ -11,6 +11,7 @@ class Character:
         self.movement_range = movement_range
         self.movement_cost = move_cost
         self.owner = owner
+        self.resistance = resistance
         self.behavior = behavior
         self.attacks = attacks
         self.abilities = abilities
@@ -35,10 +36,13 @@ class Character:
         self.cooldown += cooldown
 
     def take_damage(self, damage):
+        if self.resistance:
+            damage *= 1 - self.resistance
         self.health -= round(damage)
+
         if self.health < 0:
             self.health = 0
-        self.game.updates.append(f"{self.name} takes {damage} damage. ({self.health}/{self.max_health} HP left)")
+        self.game.updates.append(f"{self.name} takes {damage} damage.")
         if not self.is_alive():
             # Remove from tile
             if self.tile and self.tile.character is self:
@@ -46,6 +50,8 @@ class Character:
             # Remove from game character list
             if self in self.game.characters:    
                 self.game.characters.remove(self)
+            if self in self.game.turn_queue:
+                self.game.turn_queue.remove(self)
             self.game.updates.append(f"{self.name} has been defeated!")
 
     def heal(self, amount):

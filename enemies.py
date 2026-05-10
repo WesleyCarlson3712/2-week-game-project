@@ -21,26 +21,26 @@ def create_archer(game, tile, owner):
 def create_ice_elemental_ranged(game, tile, owner):
     return character.Character(
         game, "Ice Elemental", 70, tile, 3, 17, owner, behavior=RangedBehavior(),
-        attacks=[attack.Attack("Freeze", 10, 20, cooldown=60, range=4)],
-        effects=[effect.Effect(game, "Freezing", activations=1, interval=1, on_tick=lambda c: c.apply_cooldown(15))]
+        attacks=[attack.Attack("Freeze", 10, 20, cooldown=60, range=4,
+        effects=[effect.Effect(game, "Freezing", activations=1, interval=1, on_start=lambda c: c.apply_cooldown(10))])]
     )
 def create_ice_elemental_melee(game, tile, owner):
     return character.Character(
         game, "Ice Elemental", 100, tile, 4, 12, owner, behavior=AggressiveBehavior(),
-        attacks=[attack.Attack("Freeze", 15, 25, cooldown=50, range=1)],
-        effects=[effect.Effect(game, "Freezing", activations=1, interval=1, on_tick=lambda c: c.apply_cooldown(10))]
+        attacks=[attack.Attack("Freeze", 15, 25, cooldown=50, range=1,
+        effects=[effect.Effect(game, "Freezing", activations=1, interval=1, on_start=lambda c: c.apply_cooldown(10))])]
     )
 def create_fire_elemental_ranged(game, tile, owner):
     return character.Character(
         game, "Fire Elemental", 70, tile, 3, 17, owner, behavior=RangedBehavior(),
-        attacks=[attack.Attack("Burn", 7, 15, cooldown=60, range=4)],
-        effects=[effect.Effect(game, "Burning", activations=5, interval=20, on_tick=lambda c: c.take_damage(5))]
+        attacks=[attack.Attack("Burn", 7, 15, cooldown=60, range=4,
+        effects=[effect.Effect(game, "Burning", activations=3, interval=20, on_tick=lambda c: c.take_damage(5))])]
     )
 def create_fire_elemental_melee(game, tile, owner):
     return character.Character(
         game, "Fire Elemental", 100, tile, 4, 12, owner, behavior=AggressiveBehavior(),
-        attacks=[attack.Attack("Burn", 15, 25, cooldown=50, range=1)],
-        effects=[effect.Effect(game, "Burning", activations=5, interval=20, on_tick=lambda c: c.take_damage(5))]
+        attacks=[attack.Attack("Burn", 15, 25, cooldown=50, range=1,
+        effects=[effect.Effect(game, "Burning", activations=3, interval=20, on_tick=lambda c: c.take_damage(5))])]
     )
 
 enemy_types = {

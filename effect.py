@@ -1,5 +1,5 @@
 class Effect:
-    def __init__(self, game, name, interval, activations, delay = 0, on_tick_update = "", on_start=None, on_tick=None, on_end=None, cleanup=None):
+    def __init__(self, game, name, interval, activations, delay = 0, on_start=None, on_tick=None, on_end=None, cleanup=None):
         self.name = name
         # wait this many ticks between activations
         self.interval = interval
@@ -8,7 +8,6 @@ class Effect:
         # how many ticks to wait before the first activation.
         self.delay = delay
         # the update we see when this triggers on tick
-        self.on_tick_update = on_tick_update
         # the tick the game was on when this effect was applied. on_tick runs when (current_tick - start_tick) % interval == 0
         self.start_tick = 0
 
@@ -22,9 +21,8 @@ class Effect:
         if self.on_start:
             self.on_start_lambda(character)
 
-    def on_tick(self, game, character):
+    def on_tick(self, character):
         # what happens to a character every time the effect activates
-        game.updates.append(self.on_tick_update)
         if self.on_tick:
             self.on_tick_lambda(character) 
 

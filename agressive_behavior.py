@@ -21,12 +21,12 @@ class AggressiveBehavior(AIBehavior):
                 if not next_tile:
                     break
 
-                old_distance = (character.tile.distance_to(target.tile))
-                new_distance = (next_tile.distance_to(target.tile))
+                # old_distance = (character.tile.distance_to(target.tile))
+                # new_distance = (next_tile.distance_to(target.tile))
 
-                # stop if movement no longer improves
-                if new_distance >= old_distance:
-                    break
+                # # # stop if movement no longer improves
+                # # if new_distance >= old_distance:
+                # #     break
 
                 character.move(next_tile)
                 moves_remaining -= 1

@@ -19,11 +19,12 @@ GRID_ORIGIN_Y = HEIGHT // 2
 class HexGrid(arcade.Window):
     def __init__(self):
         super().__init__(WIDTH, HEIGHT, "Battle Game")
-
         self.tiles = {}
         self.info_box = []
         self.build_grid()
         self.link_neighbors()
+        self.music = None
+        self.music_player = None
         self.color_palette = [(0,0,0),(0,0,0),(0,0,0)]
         self.game_manager = game_manager.GameManager(self)
         
@@ -31,6 +32,11 @@ class HexGrid(arcade.Window):
         arcade.set_background_color(background_color)
         self.color_palette = tile_colors
 
+    def update_music(self, m):
+        if self.music and self.music_player:
+            arcade.stop_sound(self.music_player)
+        self.music = arcade.load_sound(m)
+        self.music_player = self.music.play(volume = 0.15, loop = True)
     # -------------------------
     # GRID CREATION
     # -------------------------
@@ -105,7 +111,7 @@ class HexGrid(arcade.Window):
             if tile.character:
                 arcade.draw_circle_filled(x, y, 16, arcade.color.BLUE if tile.character.owner.name == "Player" else arcade.color.RED)
                 if tile.character == self.game_manager.active_character:
-                    arcade.draw_circle_outline(x, y, 16, arcade.color.GREEN)
+                    arcade.draw_circle_filled(x, y, 16, arcade.color.GREEN)
         if self.game_manager.state_stack:
             if self.game_manager.state_stack[-1] == "select tile for move":
                 distance_colors = [arcade.color.YELLOW_GREEN, arcade.color.YELLOW]
@@ -249,7 +255,7 @@ class HexGrid(arcade.Window):
         for character in self.game_manager.characters:
             self.draw_stat_bar(character, "health", 0, -20, 5)
             self.draw_stat_bar(character, "cooldown", 0, -30, 5)
-            self.draw_name(character, 0, 30, 12)
+            self.draw_name(character, 0, 0, 12)
         if self.game_manager.menu_stack:
             menu = self.game_manager.menu_stack[-1]
             menu.draw(panel_x, mid_y, WIDTH, 0, UI_HEADER_HEIGHT )
