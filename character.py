@@ -2,7 +2,7 @@ import random
 
 
 class Character:
-    def __init__(self, game, name, max_health, tile, movement_range, move_cost, owner, behavior = None, attacks=None, items=None, abilities=None, resistance = None):
+    def __init__(self, game, name, max_health, tile, movement_range, move_cost, owner, behavior = None, attacks=None, items=None, abilities=None, resistance = 0):
         self.game = game
         self.name = name
         self.max_health = max_health

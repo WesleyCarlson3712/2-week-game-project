@@ -41,11 +41,11 @@ class GameManager:
         self.wave_number = 0
         self.waves = [
             wave.Wave(self, ["archer", "goblin"], "music/normal.mp3", [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
-            wave.Wave(self, ["archer", "archer", "goblin", "goblin"], None, [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
+            # wave.Wave(self, ["archer", "archer", "goblin", "goblin"], None, [(211, 211, 211), (128, 128, 128), (169, 169, 169)], (26, 17, 16)),
             wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_melee"], "music/ice.mp3", [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
-            wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_ranged", "ice_elemental_melee", "ice_elemental_melee"], None, [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
+            # wave.Wave(self, ["ice_elemental_ranged", "ice_elemental_ranged", "ice_elemental_melee", "ice_elemental_melee"], None, [(176, 224, 251), (164, 236, 242), (232, 246, 249)], (222, 235, 244)),
             wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_melee"], "music/fire.mp3", [(165, 22, 0), (198, 82, 0), (160, 58, 17)], (93, 22, 0)),
-            wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_ranged", "fire_elemental_melee", "fire_elemental_melee"], None, [(165, 22, 0), (198, 82, 0), (160, 58, 17)], (93, 22, 0))
+            # wave.Wave(self, ["fire_elemental_ranged", "fire_elemental_ranged", "fire_elemental_melee", "fire_elemental_melee"], None, [(165, 22, 0), (198, 82, 0), (160, 58, 17)], (93, 22, 0))
             ]
         
 
